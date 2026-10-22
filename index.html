@@ -9,11 +9,13 @@
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}html,body{margin:0}
 body{background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.app{display:grid;grid-template-columns:340px minmax(0,1fr);gap:32px;padding:24px;max-width:1600px;margin:0 auto;height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+.shell{display:flex;flex-direction:column;max-width:1600px;margin:0 auto;height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+.hdr{padding:20px 24px 14px}.hdr h1{margin:0}
+.app{display:grid;grid-template-columns:340px minmax(0,1fr);gap:32px;padding:0 24px 24px;flex:1;min-height:0}
 .app.closed{grid-template-columns:minmax(0,1fr)}.app.closed .side{display:none}
 .side{overflow-y:auto;min-height:0;padding-right:12px;margin-right:-12px;scrollbar-width:thin;scrollbar-color:#d1d5db transparent}
 .main{display:flex;flex-direction:column;min-height:0;min-width:0}
-@media(max-width:820px){.app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px;padding:12px}.app.closed{grid-template-rows:minmax(0,1fr)}.side{max-height:45dvh;margin-right:0;padding-right:4px}}
+@media(max-width:820px){.app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px;padding:0 12px 12px}.hdr{padding:12px 12px 8px}.app.closed{grid-template-rows:minmax(0,1fr)}.side{max-height:45dvh;margin-right:0;padding-right:4px}}
 .card{background:var(--panel);border:none;border-bottom:1px solid var(--line);border-radius:0;padding:0 0 20px;margin-bottom:20px}
 .card:last-child{border-bottom:none}
 h1{font-size:22px;font-weight:700;margin:0 0 4px;color:var(--accent);letter-spacing:-.01em}
@@ -123,7 +125,10 @@ function App(){
     count.current=rows.length;
   },[people,edges,sel]);
 
-  useEffect(()=>{const t=setTimeout(()=>{if(chart.current&&box.current){const el=box.current;chart.current.svgWidth(el.clientWidth).svgHeight(el.clientHeight);d3.select(el).select('svg').attr('width',el.clientWidth).attr('height',el.clientHeight);chart.current.fit()}},60);return()=>clearTimeout(t)},[open]);
+  useEffect(()=>{const el=box.current;let t;
+    const sync=()=>{const c=chart.current;if(!c||!el.clientWidth||!el.clientHeight)return;c.svgWidth(el.clientWidth).svgHeight(el.clientHeight);d3.select(el).select('svg').attr('width',el.clientWidth).attr('height',el.clientHeight);c.fit()};
+    const ro=new ResizeObserver(()=>{clearTimeout(t);t=setTimeout(sync,120)});ro.observe(el);
+    return()=>{ro.disconnect();clearTimeout(t)}},[]);
   const set=k=>e=>setF({...f,[k]:e.target.value});
   const reset=()=>{setSel(null);setF({name:'',role:'',contact:''});setRel({mgr:'',sub:''});setAerr('')};
   const submit=ev=>{ev.preventDefault();if(!f.name.trim())return;
@@ -150,9 +155,9 @@ function App(){
   const mk=ph=>[h('option',{key:'',value:''},ph),...people.map(p=>h('option',{key:p.id,value:p.id},p.name))];
   const opts=mk('Seleccionar persona…');
 
-  return h('div',{className:'app'+(open?'':' closed')},
+  return h('div',{className:'shell'},h('div',{className:'hdr'},h('h1',null,'Organigrama Acatec')),h('div',{className:'app'+(open?'':' closed')},
     h('div',{className:'side'},
-      h('div',{className:'card'},h('h1',{style:{marginBottom:18}},'Organigrama Acatec'),
+      h('div',{className:'card'},h('h1',{style:{marginBottom:18}},'Panel de Edición'),
         h('h2',null,sel?'Editar persona':'Añadir persona'),
         h('form',{onSubmit:submit},
           h('label',null,'Nombre'),h('input',{value:f.name,onChange:set('name'),placeholder:'María García'}),
@@ -182,14 +187,14 @@ function App(){
         people.length>0&&h('div',{className:'row'},h('button',{className:'d',onClick:()=>{setPeople([]);setEdges([]);reset()}},'Borrar todo'))),
     ),
     h('div',{className:'main'},
-      h('div',{className:'top'},h('div',{className:'row',style:{margin:0,alignItems:'center'}},h('button',{onClick:()=>setOpen(!open),title:'Panel de Edición'},open?'« Panel de Edición':'» Panel de Edición'),h('h2',{style:{margin:0}},'Vista previa')),
+      h('div',{className:'top'},h('div',{className:'row',style:{margin:0,alignItems:'center'}},h('button',{onClick:()=>setOpen(!open),title:'Panel de Edición'},open?'« Panel de Edición':'» Panel de Edición')),
         h('div',{className:'row',style:{margin:0}},
           h('button',{onClick:()=>chart.current&&chart.current.fit(),disabled:!people.length},'Ajustar a pantalla'),
           h('button',{className:'p',onClick:exp,disabled:!people.length||busy},busy?'Preparando…':'Guardar como PNG'))),
       h('div',{className:'chartbox'},h('div',{id:'chart',ref:box}),
         !people.length&&h('div',{className:'empty'},'Añade a tu primera persona para empezar.')),
       h('p',{className:'sub',style:{marginTop:8}},'Arrastra para mover y usa la rueda para hacer zoom. Haz clic en una persona para editarla.'))
-  );
+  ));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(h(App));
 </script>
