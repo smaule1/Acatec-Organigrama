@@ -1,374 +1,197 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Organigrama ACATEC · Personal administrativo y EHS</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/d3-flextree@2.1.2/build/d3-flextree.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/d3-org-chart@3.1.1/build/d3-org-chart.js"></script>
+<title>Organigrama Acatec</title>
 <style>
-  :root {
-    --brand: #1e006b;
-    --brand-soft: #2a1190;
-    --bg: #f3f2f8;
-    --surface: #ffffff;
-    --text: #1b1733;
-    --muted: #6b6785;
-    --line: #d9d6e8;
-    --accent: #7c5cff;
-    box-sizing: border-box;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    color-scheme: light;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #12101f;
-      --surface: #1d1a33;
-      --text: #ecebf7;
-      --muted: #a7a3c4;
-      --line: #3a3560;
-      --brand: #3d2bb0;
-      --brand-soft: #4a37c9;
-      --accent: #a58dff;
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #12101f;
-    --surface: #1d1a33;
-    --text: #ecebf7;
-    --muted: #a7a3c4;
-    --line: #3a3560;
-    --brand: #3d2bb0;
-    --brand-soft: #4a37c9;
-    --accent: #a58dff;
-    color-scheme: dark;
-  }
-
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    display: flex;
-    flex-direction: column;
-  }
-
-  header {
-    background: var(--brand);
-    color: #fff;
-    padding: 18px 20px;
-    text-align: center;
-  }
-  header h1 { margin: 0; font-size: clamp(1.1rem, 2.5vw, 1.6rem); font-weight: 700; }
-  header p { margin: 4px 0 0; font-size: 0.85rem; opacity: 0.8; }
-
-  .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--line);
-    position: relative;
-    z-index: 5;
-  }
-  .search { position: relative; flex: 1 1 260px; max-width: 360px; }
-  .search input {
-    width: 100%;
-    padding: 9px 12px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--bg);
-    color: var(--text);
-    font: inherit;
-  }
-  .search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .results {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0; right: 0;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.12);
-    list-style: none;
-    margin: 0;
-    padding: 4px;
-    max-height: 280px;
-    overflow-y: auto;
-    display: none;
-  }
-  .results.open { display: block; }
-  .results li {
-    padding: 8px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
-  .results li:hover, .results li.active { background: var(--bg); }
-  .results small { display: block; color: var(--muted); }
-
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-  button {
-    font: inherit;
-    font-size: 0.88rem;
-    padding: 8px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--brand);
-    background: var(--brand);
-    color: #fff;
-    cursor: pointer;
-  }
-  button.ghost { background: transparent; color: var(--brand); }
-  button.ghost:hover { background: var(--bg); }
-  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-  #chart {
-    flex: 1;
-    min-height: 0;
-    width: 100%;
-    overflow: hidden;
-    background: var(--bg);
-  }
-
-  /* Node cards (rendered inside the chart) */
-  .card {
-    width: 100%;
-    height: 100%;
-    background: var(--brand);
-    color: #fff;
-    border-radius: 10px;
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 3px;
-    font-family: inherit;
-    box-shadow: 0 2px 8px rgba(30,0,107,.18);
-    overflow: hidden;
-  }
-  .card-head { display: flex; align-items: center; gap: 10px; }
-  .avatar {
-    flex: 0 0 auto;
-    width: 38px; height: 38px;
-    border-radius: 50%;
-    background: rgba(255,255,255,.18);
-    border: 2px solid rgba(255,255,255,.55);
-    display: grid;
-    place-items: center;
-    font-weight: 700;
-    font-size: 0.85rem;
-    letter-spacing: .5px;
-  }
-  .who { min-width: 0; }
-  .name { font-weight: 700; font-size: 0.92rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .role { font-size: 0.75rem; opacity: .9; line-height: 1.25; }
-  .contact { font-size: 0.7rem; opacity: .85; line-height: 1.35; margin-top: 4px; word-break: break-all; }
-  .root-card {
-    width: 100%; height: 100%;
-    background: #fff;
-    color: var(--brand);
-    border: 2px solid var(--brand);
-    border-radius: 10px;
-    display: grid;
-    place-items: center;
-    font-weight: 800;
-    letter-spacing: 2px;
-  }
-  .team-card {
-    width: 100%; height: 100%;
-    background: var(--brand-soft);
-    color: #fff;
-    border-radius: 10px;
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
-    text-align: center; padding: 8px;
-  }
-  .team-card b { font-size: 0.95rem; }
-  .team-card span { font-size: 0.75rem; opacity: .9; }
-
-  footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
-    font-size: 0.78rem;
-    color: var(--muted);
-    border-top: 1px solid var(--line);
-    background: var(--surface);
-  }
-  .brand-mark { font-weight: 700; color: var(--brand); }
+:root{--bg:#fff;--panel:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#1B0166;--accent-t:#fff;--tint:#f6f4fb;--danger:#b91c1c;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app{display:grid;grid-template-columns:340px minmax(0,1fr);gap:32px;padding:24px;max-width:1600px;margin:0 auto;height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+.app.closed{grid-template-columns:minmax(0,1fr)}.app.closed .side{display:none}
+.side{overflow-y:auto;min-height:0;padding-right:12px;margin-right:-12px;scrollbar-width:thin;scrollbar-color:#d1d5db transparent}
+.main{display:flex;flex-direction:column;min-height:0;min-width:0}
+@media(max-width:820px){.app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px;padding:12px}.app.closed{grid-template-rows:minmax(0,1fr)}.side{max-height:45dvh;margin-right:0;padding-right:4px}}
+.card{background:var(--panel);border:none;border-bottom:1px solid var(--line);border-radius:0;padding:0 0 20px;margin-bottom:20px}
+.card:last-child{border-bottom:none}
+h1{font-size:22px;font-weight:700;margin:0 0 4px;color:var(--accent);letter-spacing:-.01em}
+h2{font-size:11px;font-weight:600;margin:0 0 10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+p.sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+input,select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--text);font:inherit}
+input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(27,1,102,.12)}
+.row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+button{font:inherit;border:1px solid var(--line);background:#fff;color:var(--text);padding:8px 14px;border-radius:6px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+button.p{background:var(--accent);color:var(--accent-t);border-color:var(--accent);font-weight:600}
+button.p:hover:not(:disabled){background:#2d0a8f;color:#fff}
+button:disabled{opacity:.4;cursor:not-allowed}button.d{color:var(--danger)}
+ul{list-style:none;margin:0;padding:0}
+li.it{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px}
+li.it:hover{background:var(--tint)}li.it.sel{background:var(--tint);box-shadow:inset 3px 0 0 var(--accent)}
+li.it small{color:var(--muted);display:block;font-size:12px}
+.x{border:none!important;background:none!important;color:#9ca3af!important;padding:2px 8px;font-size:18px;line-height:1}
+.x:hover{color:var(--danger)!important}
+.err{color:var(--danger);font-size:13px;margin-top:8px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chartbox{position:relative;background:#fff;border:1px solid var(--line);border-radius:8px;flex:1;min-height:240px;overflow:hidden}
+#chart{position:absolute;inset:0}
+.empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);text-align:center;padding:20px}
 </style>
 </head>
 <body>
-
-<header>
-  <h1>Organigrama ACATEC · Personal administrativo y EHS</h1>
-  <p>Salud Ocupacional &amp; Ambiente</p>
-</header>
-
-<div class="toolbar">
-  <div class="search">
-    <input id="q" type="search" placeholder="Buscar persona, cargo o área…" autocomplete="off" aria-label="Buscar en el organigrama">
-    <ul id="results" class="results" role="listbox"></ul>
-  </div>
-  <div class="actions">
-    <button id="expand" class="ghost">Expandir todo</button>
-    <button id="fit" class="ghost">Ajustar vista</button>
-  </div>
-</div>
-
-<div id="chart"></div>
-
-<footer>
-  <span class="brand-mark">acatec</span>
-  <span>Haga clic en la flecha de cada tarjeta para mostrar u ocultar su equipo.</span>
-</footer>
-
+<div id="root"></div>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-flextree@2.1.2/build/d3-flextree.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-org-chart@3.1.1/build/d3-org-chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script>
-  // ---- Data -------------------------------------------------------------
-  // parentId null = top of the chart. "dios" is the top node shown in the source chart.
-  const people = [
-    { id: "dios", parentId: null, name: "DIOS", role: "", contact: [] },
+const {useState,useMemo,useEffect,useRef}=React, h=React.createElement;
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ROOT='__org__';
+const reaches=(edges,from,to)=>{const st=[from],s=new Set();while(st.length){const n=st.pop();if(n===to)return true;if(s.has(n))continue;s.add(n);edges.filter(e=>e.from===n).forEach(e=>st.push(e.to))}return false};
 
-    { id: "marilux", parentId: "dios", name: "Marilux Barrantes C", role: "Gerente General",
-      contact: ["mbarantes@acatecso.com", "8962-2221"] },
+// Build d3-org-chart data: first manager = tree parent, extra managers = dotted connections.
+function toChartData(people,edges){
+  const parent={},conns=[];
+  edges.forEach(e=>{if(parent[e.to]===undefined)parent[e.to]=e.from;else conns.push({from:e.from,to:e.to,label:'también reporta a'})});
+  const roots=people.filter(p=>parent[p.id]===undefined);
+  const rows=people.map(p=>({...p,parentId:parent[p.id]!==undefined?parent[p.id]:(roots.length>1?ROOT:null),_expanded:true}));
+  if(roots.length>1)rows.unshift({id:ROOT,name:'Organización',role:'',contact:'',parentId:null,_expanded:true,synthetic:true});
+  return {rows,conns};
+}
+function nodeHtml(d,sel){
+  const p=d.data;
+  if(p.synthetic)return `<div style="height:100%;display:flex;align-items:center;justify-content:center;border:1px dashed #c9c4dc;border-radius:8px;background:#fff;color:#9ca3af;font:500 13px system-ui,sans-serif">Organización</div>`;
+  const on=sel===p.id,clamp='display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word';
+  return `<div style="height:100%;box-sizing:border-box;border:${on?2:1}px solid ${on?'#1B0166':'#dcd8e8'};border-top:4px solid #1B0166;border-radius:8px;background:#fff;padding:8px 12px;text-align:center;font-family:system-ui,sans-serif;overflow:hidden;display:flex;flex-direction:column;justify-content:center">
+  <div style="font:600 15px system-ui,sans-serif;color:#1B0166;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name)}</div>
+  <div style="font:13px/1.25 system-ui,sans-serif;color:#374151;margin-top:3px;${clamp}">${esc(p.role)}</div>
+  <div style="font:11px/1.3 system-ui,sans-serif;color:#9ca3af;margin-top:3px;${clamp}">${esc(p.contact)}</div></div>`;
+}
+function dataUrlToBlob(u){const [m,b]=u.split(',');const bin=atob(b),a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type:'image/png'})}
+async function saveBlob(blob){
+  const dl=await (window.claude&&claude.use?claude.use('downloads').catch(()=>null):null);
+  if(dl)await dl.save({filename:'organigrama.png',data:blob});
+  else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='organigrama.png';a.click()}
+}
 
-    { id: "luis", parentId: "dios", name: "Luis Carlos Zúñiga R", role: "Socio",
-      contact: ["lzuniga@acatecso.com", "8845-6111"] },
+let uid=10;
+const SAMPLE=[
+  {id:'dios',name:'DIOS',role:'',contact:''},
+  {id:'mar',name:'Marilux Barrantes C',role:'Gerente General',contact:'mbarantes@acatecso.com · 8962-2221'},
+  {id:'luis',name:'Luis Carlos Zúñiga R',role:'Socio',contact:'lzuniga@acatecso.com · 8845-6111'},
+  {id:'lidia',name:'Lidia Romero Doña',role:'Coordinadora Técnica',contact:'lromero@acatecso.com · 8838-9199'},
+  {id:'hector',name:'Héctor Barrantes Castro',role:'Asistente de Supervisión Operativa',contact:'hbarrantes@acatecso.com · 7099-3933'},
+  {id:'laura',name:'Laura Fernández',role:'Supervisora Operativa',contact:'lfernandez@acatecso.com · 7148-4445'},
+  {id:'paola',name:'Paola Meoño Castro',role:'Jefatura de Capital Humano',contact:'recursoshumanos@acatecso.com · 8386-7171'},
+  {id:'wendy',name:'Wendy San Lee',role:'Coordinadora de proyectos',contact:'so@parquetempisque.com / so.tempisque@acatecso.com · 8531-4476'},
+  {id:'ehs',name:'EHS',role:'Inspectores de Salud Ocupacional en Proyectos',contact:''},
+  {id:'sofia',name:'Sofia Campos Carmona',role:'Asistente administrativa',contact:'info@acatecso.com'}];
+const SEDGES=[{from:'dios',to:'mar'},{from:'dios',to:'luis'},
+  {from:'mar',to:'lidia'},{from:'mar',to:'hector'},{from:'mar',to:'laura'},{from:'mar',to:'paola'},
+  {from:'lidia',to:'wendy'},{from:'laura',to:'ehs'},{from:'paola',to:'sofia'}];
 
-    { id: "lidia", parentId: "marilux", name: "Lidia Romero Doña", role: "Coordinadora Técnica",
-      contact: ["lromero@acatecso.com", "8838-9199"] },
+function App(){
+  const [people,setPeople]=useState(SAMPLE),[edges,setEdges]=useState(SEDGES);
+  const [f,setF]=useState({name:'',role:'',contact:''}),[sel,setSel]=useState(null);
+  const [open,setOpen]=useState(true),[rel,setRel]=useState({mgr:'',sub:''}),[aerr,setAerr]=useState('');
+  const [from,setFrom]=useState(''),[to,setTo]=useState(''),[err,setErr]=useState(''),[busy,setBusy]=useState(false);
+  const box=useRef(null),chart=useRef(null),count=useRef(0);
+  const byId=Object.fromEntries(people.map(p=>[p.id,p]));
+  const pick=p=>{setSel(p.id);setF({name:p.name,role:p.role,contact:p.contact})};
+  const pickRef=useRef();pickRef.current=id=>{const p=byId[id];if(p)pick(p)};
 
-    { id: "hector", parentId: "marilux", name: "Héctor Barrantes Castro", role: "Asistente de Supervisión Operativa",
-      contact: ["hbarrantes@acatecso.com", "7099-3933"] },
-
-    { id: "laura", parentId: "marilux", name: "Laura Fernández", role: "Supervisora Operativa",
-      contact: ["lfernandez@acatecso.com", "7148-4445"] },
-
-    { id: "paola", parentId: "marilux", name: "Paola Meoño Castro", role: "Jefatura de Capital Humano",
-      contact: ["recursoshumanos@acatecso.com", "8386-7171"] },
-
-    { id: "wendy", parentId: "lidia", name: "Wendy San Lee", role: "Coordinadora de proyectos",
-      contact: ["so@parquetempisque.com", "so.tempisque@acatecso.com", "8531-4476"] },
-
-    { id: "ehs", parentId: "laura", name: "EHS", role: "Inspectores de Salud Ocupacional en Proyectos",
-      contact: [], team: true },
-
-    { id: "sofia", parentId: "paola", name: "Sofía Campos Carmona", role: "Asistente administrativa",
-      contact: ["info@acatecso.com"] }
-  ];
-
-  // ---- Helpers ----------------------------------------------------------
-  const esc = s => String(s).replace(/[&<>"']/g, c =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-  const initials = name =>
-    name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
-
-  function cardHTML(p) {
-    if (p.id === "dios") return `<div class="root-card">DIOS</div>`;
-    if (p.team) {
-      return `<div class="team-card"><b>${esc(p.name)}</b><span>${esc(p.role)}</span></div>`;
+  useEffect(()=>{
+    const el=box.current;
+    if(!people.length){chart.current=null;el.innerHTML='';count.current=0;return}
+    const {rows,conns}=toChartData(people,edges);
+    if(chart.current){const prev={};(chart.current.data()||[]).forEach(r=>prev[r.id]=r._expanded);rows.forEach(r=>{if(prev[r.id]!==undefined)r._expanded=prev[r.id]})}
+    const first=!chart.current;
+    if(first){
+      chart.current=new d3.OrgChart().container(el).svgHeight(el.clientHeight||560)
+        .nodeWidth(()=>260).nodeHeight(()=>108).childrenMargin(()=>50).compactMarginBetween(()=>30).compactMarginPair(()=>30).neighbourMargin(()=>24)
+        .onNodeClick(d=>{if(!d.data.synthetic)pickRef.current(d.data.id)})
+        .linkUpdate(function(){d3.select(this).attr('stroke','#c9c4dc').attr('stroke-width',1.5)})
+        .connectionsUpdate(function(){d3.select(this).attr('stroke','#1B0166').attr('stroke-width',1.5).attr('stroke-dasharray','6 5').attr('fill','none').attr('pointer-events','none')});
     }
-    const contact = p.contact.map(c => `<div>${esc(c)}</div>`).join("");
-    return `
-      <div class="card">
-        <div class="card-head">
-          <div class="avatar" aria-hidden="true">${esc(initials(p.name))}</div>
-          <div class="who">
-            <div class="name" title="${esc(p.name)}">${esc(p.name)}</div>
-            <div class="role">${esc(p.role)}</div>
-          </div>
-        </div>
-        ${contact ? `<div class="contact">${contact}</div>` : ""}
-      </div>`;
-  }
+    chart.current.nodeContent(d=>nodeHtml(d,sel)).data(rows).connections(conns).render();
+    if(first||count.current!==rows.length)chart.current.fit();
+    count.current=rows.length;
+  },[people,edges,sel]);
 
-  // ---- Chart ------------------------------------------------------------
-  const chart = new d3.OrgChart()
-    .container("#chart")
-    .data(people)
-    .nodeId(d => d.id)
-    .parentNodeId(d => d.parentId)
-    .nodeWidth(() => 250)
-    .nodeHeight(d => (d.data.id === "dios" ? 60 : d.data.team ? 70 : 128))
-    .childrenMargin(() => 60)
-    .compactMarginBetween(() => 30)
-    .compactMarginPair(() => 60)
-    .siblingsMargin(() => 40)
-    .buttonContent(({ node }) => `
-      <div style="padding:4px 10px;border-radius:12px;background:var(--brand);color:#fff;font-size:12px;font-family:inherit;">
-        ${node.children ? "−" : "+"} ${node.data._directSubordinates ?? ""}
-      </div>`)
-    .nodeContent(d => cardHTML(d.data))
-    .render();
+  useEffect(()=>{const t=setTimeout(()=>{if(chart.current&&box.current){const el=box.current;chart.current.svgWidth(el.clientWidth).svgHeight(el.clientHeight);d3.select(el).select('svg').attr('width',el.clientWidth).attr('height',el.clientHeight);chart.current.fit()}},60);return()=>clearTimeout(t)},[open]);
+  const set=k=>e=>setF({...f,[k]:e.target.value});
+  const reset=()=>{setSel(null);setF({name:'',role:'',contact:''});setRel({mgr:'',sub:''});setAerr('')};
+  const submit=ev=>{ev.preventDefault();if(!f.name.trim())return;
+    if(sel){setPeople(people.map(p=>p.id===sel?{...p,...f}:p));reset();return}
+    if(rel.mgr&&rel.sub&&reaches(edges,rel.sub,rel.mgr))return setAerr('Esa relación crearía un bucle.');
+    const id='p'+(uid++),ne=[];
+    if(rel.mgr)ne.push({from:rel.mgr,to:id});
+    if(rel.sub)ne.push({from:id,to:rel.sub});
+    setPeople([...people,{id,...f}]);setEdges([...edges,...ne]);reset()};
+  const remove=id=>{setPeople(people.filter(p=>p.id!==id));setEdges(edges.filter(e=>e.from!==id&&e.to!==id));if(sel===id)reset()};
+  const connect=()=>{setErr('');
+    if(!from||!to)return;
+    if(from===to)return setErr('Una persona no puede reportarse a sí misma.');
+    if(edges.some(e=>e.from===from&&e.to===to))return setErr('Ya están conectados.');
+    if(reaches(edges,to,from))return setErr('Eso crearía un bucle.');
+    setEdges([...edges,{from,to}])};
+  const btns=()=>d3.select(box.current).selectAll('.node-button-g');
+  const exp=()=>{if(!chart.current)return;setBusy(true);
+    btns().style('display','none');
+    const done=()=>{btns().style('display',null);setBusy(false)};
+    chart.current.exportImg({full:true,scale:2,save:false,backgroundColor:'#FFFFFF',
+      onLoad:async u=>{try{await saveBlob(dataUrlToBlob(u))}catch(e){}done()}});
+    setTimeout(done,8000)};
+  const mk=ph=>[h('option',{key:'',value:''},ph),...people.map(p=>h('option',{key:p.id,value:p.id},p.name))];
+  const opts=mk('Seleccionar persona…');
 
-  chart.expandAll().fit();
-
-  // ---- Controls ---------------------------------------------------------
-  document.getElementById("expand").addEventListener("click", () => {
-    chart.expandAll().fit({ animate: true });
-  });
-  document.getElementById("fit").addEventListener("click", () => {
-    chart.fit({ animate: true });
-  });
-  window.addEventListener("resize", () => chart.fit({ animate: false }));
-
-  // ---- Search -----------------------------------------------------------
-  const input = document.getElementById("q");
-  const list = document.getElementById("results");
-  let activeIndex = -1;
-  let matches = [];
-
-  function renderResults() {
-    const term = input.value.trim().toLowerCase();
-    matches = term
-      ? people.filter(p => p.id !== "dios" &&
-          (p.name + " " + p.role + " " + p.contact.join(" ")).toLowerCase().includes(term))
-      : [];
-    activeIndex = matches.length ? 0 : -1;
-    list.innerHTML = matches.map((p, i) =>
-      `<li role="option" data-id="${p.id}" class="${i === activeIndex ? "active" : ""}">
-         ${esc(p.name)}<small>${esc(p.role)}</small>
-       </li>`).join("");
-    list.classList.toggle("open", term.length > 0);
-  }
-
-  function focusPerson(id) {
-    chart.setCentered(id).render();
-    list.classList.remove("open");
-    input.blur();
-  }
-
-  input.addEventListener("input", renderResults);
-  input.addEventListener("keydown", e => {
-    if (!matches.length) return;
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault();
-      activeIndex = (activeIndex + (e.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length;
-      [...list.children].forEach((li, i) => li.classList.toggle("active", i === activeIndex));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      focusPerson(matches[activeIndex].id);
-    } else if (e.key === "Escape") {
-      list.classList.remove("open");
-    }
-  });
-  list.addEventListener("click", e => {
-    const li = e.target.closest("li");
-    if (li) focusPerson(li.dataset.id);
-  });
-  document.addEventListener("click", e => {
-    if (!e.target.closest(".search")) list.classList.remove("open");
-  });
+  return h('div',{className:'app'+(open?'':' closed')},
+    h('div',{className:'side'},
+      h('div',{className:'card'},h('h1',{style:{marginBottom:18}},'Organigrama Acatec'),
+        h('h2',null,sel?'Editar persona':'Añadir persona'),
+        h('form',{onSubmit:submit},
+          h('label',null,'Nombre'),h('input',{value:f.name,onChange:set('name'),placeholder:'María García'}),
+          h('label',null,'Cargo'),h('input',{value:f.role,onChange:set('role'),placeholder:'Gerente de Producto'}),
+          h('label',null,'Contacto'),h('input',{value:f.contact,onChange:set('contact'),placeholder:'maria@empresa.com'}),
+          !sel&&people.length>0&&h('label',null,'Reporta a (opcional)'),
+          !sel&&people.length>0&&h('select',{value:rel.mgr,onChange:e=>setRel({...rel,mgr:e.target.value})},mk('Ninguno')),
+          !sel&&people.length>0&&h('label',null,'Tiene a su cargo (opcional)'),
+          !sel&&people.length>0&&h('select',{value:rel.sub,onChange:e=>setRel({...rel,sub:e.target.value})},mk('Ninguno')),
+          aerr&&h('div',{className:'err'},aerr),
+          h('div',{className:'row'},
+            h('button',{type:'submit',className:'p',disabled:!f.name.trim()},sel?'Actualizar':'Añadir persona'),
+            sel&&h('button',{type:'button',onClick:reset},'Cancelar')))),
+      h('div',{className:'card'},h('h2',null,'Conectar'),
+        h('label',null,'Jefe/a (origen)'),h('select',{value:from,onChange:e=>setFrom(e.target.value)},opts),
+        h('label',null,'Persona a su cargo (destino)'),h('select',{value:to,onChange:e=>setTo(e.target.value)},opts),
+        h('div',{className:'row'},h('button',{className:'p',onClick:connect,disabled:!from||!to},'Conectar')),
+        h('p',{className:'sub',style:{marginTop:8,marginBottom:0}},'El primer jefe de una persona define su lugar en el árbol; los jefes adicionales se muestran como líneas discontinuas.'),
+        err&&h('div',{className:'err'},err),
+        edges.length>0&&h('ul',{style:{marginTop:12}},edges.map((e,i)=>h('li',{className:'it',key:i,style:{cursor:'default'}},
+          h('span',null,byId[e.from].name+' → '+byId[e.to].name),
+          h('button',{className:'x',title:'Quitar',onClick:()=>setEdges(edges.filter(z=>z!==e))},'×'))))),
+      h('div',{className:'card'},h('h2',null,'Personas ('+people.length+')'),
+        h('ul',null,people.map(p=>h('li',{key:p.id,className:'it'+(sel===p.id?' sel':''),onClick:()=>pick(p)},
+          h('span',null,p.name,h('small',null,[p.role,p.contact].filter(Boolean).join(' · '))),
+          h('button',{className:'x',title:'Eliminar',onClick:ev=>{ev.stopPropagation();remove(p.id)}},'×')))),
+        people.length>0&&h('div',{className:'row'},h('button',{className:'d',onClick:()=>{setPeople([]);setEdges([]);reset()}},'Borrar todo'))),
+    ),
+    h('div',{className:'main'},
+      h('div',{className:'top'},h('div',{className:'row',style:{margin:0,alignItems:'center'}},h('button',{onClick:()=>setOpen(!open),title:'Panel de Edición'},open?'« Panel de Edición':'» Panel de Edición'),h('h2',{style:{margin:0}},'Vista previa')),
+        h('div',{className:'row',style:{margin:0}},
+          h('button',{onClick:()=>chart.current&&chart.current.fit(),disabled:!people.length},'Ajustar a pantalla'),
+          h('button',{className:'p',onClick:exp,disabled:!people.length||busy},busy?'Preparando…':'Guardar como PNG'))),
+      h('div',{className:'chartbox'},h('div',{id:'chart',ref:box}),
+        !people.length&&h('div',{className:'empty'},'Añade a tu primera persona para empezar.')),
+      h('p',{className:'sub',style:{marginTop:8}},'Arrastra para mover y usa la rueda para hacer zoom. Haz clic en una persona para editarla.'))
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
 </script>
 </body>
 </html>
