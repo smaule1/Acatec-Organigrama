@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Organigrama ACATEC · Personal administrativo y EHS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-flextree@2.1.2/build/d3-flextree.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-org-chart@3.1.1/build/d3-org-chart.js"></script>
+<style>
+  :root {
+    --brand: #1e006b;
+    --brand-soft: #2a1190;
+    --bg: #f3f2f8;
+    --surface: #ffffff;
+    --text: #1b1733;
+    --muted: #6b6785;
+    --line: #d9d6e8;
+    --accent: #7c5cff;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12101f;
+      --surface: #1d1a33;
+      --text: #ecebf7;
+      --muted: #a7a3c4;
+      --line: #3a3560;
+      --brand: #3d2bb0;
+      --brand-soft: #4a37c9;
+      --accent: #a58dff;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12101f;
+    --surface: #1d1a33;
+    --text: #ecebf7;
+    --muted: #a7a3c4;
+    --line: #3a3560;
+    --brand: #3d2bb0;
+    --brand-soft: #4a37c9;
+    --accent: #a58dff;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: var(--brand);
+    color: #fff;
+    padding: 18px 20px;
+    text-align: center;
+  }
+  header h1 { margin: 0; font-size: clamp(1.1rem, 2.5vw, 1.6rem); font-weight: 700; }
+  header p { margin: 4px 0 0; font-size: 0.85rem; opacity: 0.8; }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    z-index: 5;
+  }
+  .search { position: relative; flex: 1 1 260px; max-width: 360px; }
+  .search input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+  }
+  .search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .results {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    max-height: 280px;
+    overflow-y: auto;
+    display: none;
+  }
+  .results.open { display: block; }
+  .results li {
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .results li:hover, .results li.active { background: var(--bg); }
+  .results small { display: block; color: var(--muted); }
+
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  button {
+    font: inherit;
+    font-size: 0.88rem;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--brand);
+    background: var(--brand);
+    color: #fff;
+    cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--brand); }
+  button.ghost:hover { background: var(--bg); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  #chart {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  /* Node cards (rendered inside the chart) */
+  .card {
+    width: 100%;
+    height: 100%;
+    background: var(--brand);
+    color: #fff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    font-family: inherit;
+    box-shadow: 0 2px 8px rgba(30,0,107,.18);
+    overflow: hidden;
+  }
+  .card-head { display: flex; align-items: center; gap: 10px; }
+  .avatar {
+    flex: 0 0 auto;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.18);
+    border: 2px solid rgba(255,255,255,.55);
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: .5px;
+  }
+  .who { min-width: 0; }
+  .name { font-weight: 700; font-size: 0.92rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .role { font-size: 0.75rem; opacity: .9; line-height: 1.25; }
+  .contact { font-size: 0.7rem; opacity: .85; line-height: 1.35; margin-top: 4px; word-break: break-all; }
+  .root-card {
+    width: 100%; height: 100%;
+    background: #fff;
+    color: var(--brand);
+    border: 2px solid var(--brand);
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    letter-spacing: 2px;
+  }
+  .team-card {
+    width: 100%; height: 100%;
+    background: var(--brand-soft);
+    color: #fff;
+    border-radius: 10px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; padding: 8px;
+  }
+  .team-card b { font-size: 0.95rem; }
+  .team-card span { font-size: 0.75rem; opacity: .9; }
+
+  footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+    font-size: 0.78rem;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .brand-mark { font-weight: 700; color: var(--brand); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Organigrama ACATEC · Personal administrativo y EHS</h1>
+  <p>Salud Ocupacional &amp; Ambiente</p>
+</header>
+
+<div class="toolbar">
+  <div class="search">
+    <input id="q" type="search" placeholder="Buscar persona, cargo o área…" autocomplete="off" aria-label="Buscar en el organigrama">
+    <ul id="results" class="results" role="listbox"></ul>
+  </div>
+  <div class="actions">
+    <button id="expand" class="ghost">Expandir todo</button>
+    <button id="fit" class="ghost">Ajustar vista</button>
+  </div>
+</div>
+
+<div id="chart"></div>
+
+<footer>
+  <span class="brand-mark">acatec</span>
+  <span>Haga clic en la flecha de cada tarjeta para mostrar u ocultar su equipo.</span>
+</footer>
+
+<script>
+  // ---- Data -------------------------------------------------------------
+  // parentId null = top of the chart. "dios" is the top node shown in the source chart.
+  const people = [
+    { id: "dios", parentId: null, name: "DIOS", role: "", contact: [] },
+
+    { id: "marilux", parentId: "dios", name: "Marilux Barrantes C", role: "Gerente General",
+      contact: ["mbarantes@acatecso.com", "8962-2221"] },
+
+    { id: "luis", parentId: "dios", name: "Luis Carlos Zúñiga R", role: "Socio",
+      contact: ["lzuniga@acatecso.com", "8845-6111"] },
+
+    { id: "lidia", parentId: "marilux", name: "Lidia Romero Doña", role: "Coordinadora Técnica",
+      contact: ["lromero@acatecso.com", "8838-9199"] },
+
+    { id: "hector", parentId: "marilux", name: "Héctor Barrantes Castro", role: "Asistente de Supervisión Operativa",
+      contact: ["hbarrantes@acatecso.com", "7099-3933"] },
+
+    { id: "laura", parentId: "marilux", name: "Laura Fernández", role: "Supervisora Operativa",
+      contact: ["lfernandez@acatecso.com", "7148-4445"] },
+
+    { id: "paola", parentId: "marilux", name: "Paola Meoño Castro", role: "Jefatura de Capital Humano",
+      contact: ["recursoshumanos@acatecso.com", "8386-7171"] },
+
+    { id: "wendy", parentId: "lidia", name: "Wendy San Lee", role: "Coordinadora de proyectos",
+      contact: ["so@parquetempisque.com", "so.tempisque@acatecso.com", "8531-4476"] },
+
+    { id: "ehs", parentId: "laura", name: "EHS", role: "Inspectores de Salud Ocupacional en Proyectos",
+      contact: [], team: true },
+
+    { id: "sofia", parentId: "paola", name: "Sofía Campos Carmona", role: "Asistente administrativa",
+      contact: ["info@acatecso.com"] }
+  ];
+
+  // ---- Helpers ----------------------------------------------------------
+  const esc = s => String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  const initials = name =>
+    name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+
+  function cardHTML(p) {
+    if (p.id === "dios") return `<div class="root-card">DIOS</div>`;
+    if (p.team) {
+      return `<div class="team-card"><b>${esc(p.name)}</b><span>${esc(p.role)}</span></div>`;
+    }
+    const contact = p.contact.map(c => `<div>${esc(c)}</div>`).join("");
+    return `
+      <div class="card">
+        <div class="card-head">
+          <div class="avatar" aria-hidden="true">${esc(initials(p.name))}</div>
+          <div class="who">
+            <div class="name" title="${esc(p.name)}">${esc(p.name)}</div>
+            <div class="role">${esc(p.role)}</div>
+          </div>
+        </div>
+        ${contact ? `<div class="contact">${contact}</div>` : ""}
+      </div>`;
+  }
+
+  // ---- Chart ------------------------------------------------------------
+  const chart = new d3.OrgChart()
+    .container("#chart")
+    .data(people)
+    .nodeId(d => d.id)
+    .parentNodeId(d => d.parentId)
+    .nodeWidth(() => 250)
+    .nodeHeight(d => (d.data.id === "dios" ? 60 : d.data.team ? 70 : 128))
+    .childrenMargin(() => 60)
+    .compactMarginBetween(() => 30)
+    .compactMarginPair(() => 60)
+    .siblingsMargin(() => 40)
+    .buttonContent(({ node }) => `
+      <div style="padding:4px 10px;border-radius:12px;background:var(--brand);color:#fff;font-size:12px;font-family:inherit;">
+        ${node.children ? "−" : "+"} ${node.data._directSubordinates ?? ""}
+      </div>`)
+    .nodeContent(d => cardHTML(d.data))
+    .render();
+
+  chart.expandAll().fit();
+
+  // ---- Controls ---------------------------------------------------------
+  document.getElementById("expand").addEventListener("click", () => {
+    chart.expandAll().fit({ animate: true });
+  });
+  document.getElementById("fit").addEventListener("click", () => {
+    chart.fit({ animate: true });
+  });
+  window.addEventListener("resize", () => chart.fit({ animate: false }));
+
+  // ---- Search -----------------------------------------------------------
+  const input = document.getElementById("q");
+  const list = document.getElementById("results");
+  let activeIndex = -1;
+  let matches = [];
+
+  function renderResults() {
+    const term = input.value.trim().toLowerCase();
+    matches = term
+      ? people.filter(p => p.id !== "dios" &&
+          (p.name + " " + p.role + " " + p.contact.join(" ")).toLowerCase().includes(term))
+      : [];
+    activeIndex = matches.length ? 0 : -1;
+    list.innerHTML = matches.map((p, i) =>
+      `<li role="option" data-id="${p.id}" class="${i === activeIndex ? "active" : ""}">
+         ${esc(p.name)}<small>${esc(p.role)}</small>
+       </li>`).join("");
+    list.classList.toggle("open", term.length > 0);
+  }
+
+  function focusPerson(id) {
+    chart.setCentered(id).render();
+    list.classList.remove("open");
+    input.blur();
+  }
+
+  input.addEventListener("input", renderResults);
+  input.addEventListener("keydown", e => {
+    if (!matches.length) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIndex = (activeIndex + (e.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length;
+      [...list.children].forEach((li, i) => li.classList.toggle("active", i === activeIndex));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      focusPerson(matches[activeIndex].id);
+    } else if (e.key === "Escape") {
+      list.classList.remove("open");
+    }
+  });
+  list.addEventListener("click", e => {
+    const li = e.target.closest("li");
+    if (li) focusPerson(li.dataset.id);
+  });
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".search")) list.classList.remove("open");
+  });
+</script>
+</body>
+</html>
